@@ -56,7 +56,7 @@ services:
 
   web:
     build: .
-    image: ghcr.io/mastodon/mastodon:v4.2.0
+    image: ghcr.io/mastodon/mastodon:v4.2.3
     restart: always
     env_file: .env.production
     command: bundle exec puma -C config/puma.rb
@@ -65,9 +65,10 @@ services:
       - internal_network
     healthcheck:
       # prettier-ignore
-      test: ['CMD-SHELL', 'wget -q --spider --proxy=off localhost:3000/health || exit 1']
+      test: ['CMD-SHELL', 'wget -q --spider --proxy=off localhost:40115/health || exit 1']
     ports:
-      - '127.0.0.1:3000:3000'
+      #- '127.0.0.1:3000:3000'
+      - '0.0.0.0:40115:3000'
     depends_on:
       - db
       - redis
@@ -76,26 +77,26 @@ services:
       - ./public/system:/mastodon/public/system
 
   streaming:
-    build: .
-    image: ghcr.io/mastodon/mastodon:v4.2.0
+    build: ./streaming
+    #image: ghcr.io/mastodon/mastodon:v4.2.3
     restart: always
     env_file: .env.production
-    command: node ./streaming
+    command: node /opt/mastodon/streaming/index.js
     networks:
       - external_network
       - internal_network
     healthcheck:
       # prettier-ignore
-      test: ['CMD-SHELL', 'wget -q --spider --proxy=off localhost:4000/api/v1/streaming/health || exit 1']
+      test: ['CMD-SHELL', 'wget -q --spider --proxy=off localhost:40116/api/v1/streaming/health || exit 1']
     ports:
-      - '127.0.0.1:4000:4000'
+      - '0.0.0.0:40116:4000'
     depends_on:
       - db
       - redis
 
   sidekiq:
     build: .
-    image: ghcr.io/mastodon/mastodon:v4.2.0
+    image: ghcr.io/mastodon/mastodon:v4.2.3
     restart: always
     env_file: .env.production
     command: bundle exec sidekiq
