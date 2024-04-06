@@ -9,13 +9,11 @@ import ImmutablePropTypes from 'react-immutable-proptypes';
 import ImmutablePureComponent from 'react-immutable-pure-component';
 import { connect } from 'react-redux';
 
-import { ReactComponent as OpenInNewIcon } from '@material-symbols/svg-600/outlined/open_in_new.svg';
-import { ReactComponent as RepeatIcon } from '@material-symbols/svg-600/outlined/repeat.svg';
-import { ReactComponent as ReplyIcon } from '@material-symbols/svg-600/outlined/reply.svg';
-import { ReactComponent as ReplyAllIcon } from '@material-symbols/svg-600/outlined/reply_all.svg';
-import { ReactComponent as StarIcon } from '@material-symbols/svg-600/outlined/star.svg';
-
-import { initBoostModal } from 'mastodon/actions/boosts';
+import OpenInNewIcon from '@/material-icons/400-24px/open_in_new.svg?react';
+import RepeatIcon from '@/material-icons/400-24px/repeat.svg?react';
+import ReplyIcon from '@/material-icons/400-24px/reply.svg?react';
+import ReplyAllIcon from '@/material-icons/400-24px/reply_all.svg?react';
+import StarIcon from '@/material-icons/400-24px/star.svg?react';
 import { replyCompose } from 'mastodon/actions/compose';
 import { reblog, favourite, unreblog, unfavourite } from 'mastodon/actions/interactions';
 import { openModal } from 'mastodon/actions/modal';
@@ -141,7 +139,7 @@ class Footer extends ImmutablePureComponent {
       } else if ((e && e.shiftKey) || !boostModal) {
         this._performReblog(status);
       } else {
-        dispatch(initBoostModal({ status, onReblog: this._performReblog }));
+        dispatch(openModal({ modalType: 'BOOST', modalProps: { status, onReblog: this._performReblog } }));
       }
     } else {
       dispatch(openModal({
@@ -179,7 +177,7 @@ class Footer extends ImmutablePureComponent {
 
     if (status.get('in_reply_to_id', null) === null) {
       replyIcon = 'reply';
-      replyIconComponent = RepeatIcon;
+      replyIconComponent = ReplyIcon;
       replyTitle = intl.formatMessage(messages.reply);
     } else {
       replyIcon = 'reply-all';
@@ -211,4 +209,4 @@ class Footer extends ImmutablePureComponent {
 
 }
 
-export default  withRouter(connect(makeMapStateToProps)(injectIntl(Footer)));
+export default  connect(makeMapStateToProps)(withRouter(injectIntl(Footer)));

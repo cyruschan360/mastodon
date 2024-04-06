@@ -1,5 +1,5 @@
+import { createSelector } from '@reduxjs/toolkit';
 import { List as ImmutableList, Map as ImmutableMap } from 'immutable';
-import { createSelector } from 'reselect';
 
 import { toServerSideType } from 'mastodon/utils/filters';
 
@@ -60,7 +60,7 @@ export const makeGetStatus = () => {
 
 export const makeGetPictureInPicture = () => {
   return createSelector([
-    (state, { id }) => state.get('picture_in_picture').statusId === id,
+    (state, { id }) => state.picture_in_picture.statusId === id,
     (state) => state.getIn(['meta', 'layout']) !== 'mobile',
   ], (inUse, available) => ImmutableMap({
     inUse: inUse && available,

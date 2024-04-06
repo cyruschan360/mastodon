@@ -123,7 +123,7 @@ module.exports = defineConfig({
     'react/react-in-jsx-scope': 'off', // not needed with new JSX transform
     'react/self-closing-comp': 'error',
 
-    // recommended values found in https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/main/src/index.js
+    // recommended values found in https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/v6.8.0/src/index.js#L46
     'jsx-a11y/accessible-emoji': 'warn',
     'jsx-a11y/click-events-have-key-events': 'off',
     'jsx-a11y/label-has-associated-control': 'off',
@@ -165,7 +165,7 @@ module.exports = defineConfig({
     //   },
     // ],
     'jsx-a11y/no-noninteractive-tabindex': 'off',
-    'jsx-a11y/no-onchange': 'warn',
+    'jsx-a11y/no-onchange': 'off',
     // recommended is full 'error'
     'jsx-a11y/no-static-element-interactions': [
       'warn',
@@ -176,7 +176,7 @@ module.exports = defineConfig({
       },
     ],
 
-    // See https://github.com/import-js/eslint-plugin-import/blob/main/config/recommended.js
+    // See https://github.com/import-js/eslint-plugin-import/blob/v2.29.1/config/recommended.js
     'import/extensions': [
       'error',
       'always',
@@ -245,7 +245,7 @@ module.exports = defineConfig({
           },
           // Immutable / Redux / data store
           {
-            pattern: '{immutable,react-redux,react-immutable-proptypes,react-immutable-pure-component,reselect}',
+            pattern: '{immutable,@reduxjs/toolkit,react-redux,react-immutable-proptypes,react-immutable-pure-component}',
             group: 'external',
             position: 'before',
           },
@@ -338,7 +338,6 @@ module.exports = defineConfig({
         'plugin:import/typescript',
         'plugin:promise/recommended',
         'plugin:jsdoc/recommended-typescript',
-        'plugin:prettier/recommended',
       ],
 
       parserOptions: {
@@ -347,13 +346,24 @@ module.exports = defineConfig({
       },
 
       rules: {
+        // Disable formatting rules that have been enabled in the base config
+        'indent': 'off',
+
         'import/consistent-type-specifier-style': ['error', 'prefer-top-level'],
 
         '@typescript-eslint/consistent-type-definitions': ['warn', 'interface'],
         '@typescript-eslint/consistent-type-exports': 'error',
         '@typescript-eslint/consistent-type-imports': 'error',
         "@typescript-eslint/prefer-nullish-coalescing": ['error', { ignorePrimitives: { boolean: true } }],
-
+        "@typescript-eslint/no-restricted-imports": [
+          "warn",
+          {
+            "name": "react-redux",
+            "importNames": ["useSelector", "useDispatch"],
+            "message": "Use typed hooks `useAppDispatch` and `useAppSelector` instead."
+          }
+        ],
+        "@typescript-eslint/restrict-template-expressions": ['warn', { allowNumber: true }],
         'jsdoc/require-jsdoc': 'off',
 
         // Those rules set stricter rules for TS files

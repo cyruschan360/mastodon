@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe ResolveAccountService, type: :service do
+RSpec.describe ResolveAccountService do
   subject { described_class.new }
 
   before do
@@ -20,7 +20,7 @@ RSpec.describe ResolveAccountService, type: :service do
       let!(:remote_account) { Fabricate(:account, username: 'foo', domain: 'ap.example.com', protocol: 'activitypub') }
 
       context 'when domain is banned' do
-        let!(:domain_block) { Fabricate(:domain_block, domain: 'ap.example.com', severity: :suspend) }
+        before { Fabricate(:domain_block, domain: 'ap.example.com', severity: :suspend) }
 
         it 'does not return an account' do
           expect(subject.call('foo@ap.example.com', skip_webfinger: true)).to be_nil
@@ -195,7 +195,7 @@ RSpec.describe ResolveAccountService, type: :service do
       expect(account.uri).to eq 'https://ap.example.com/users/foo'
     end
 
-    it 'merges accounts' do
+    it 'merges accounts', :sidekiq_inline do
       account = subject.call('foo@ap.example.com')
 
       expect(status.reload.account_id).to eq account.id
@@ -214,30 +214,23 @@ RSpec.describe ResolveAccountService, type: :service do
       expect(account.domain).to eq 'ap.example.com'
       expect(account.inbox_url).to eq 'https://ap.example.com/users/foo/inbox'
       expect(account.uri).to eq 'https://ap.example.com/users/foo'
+      expect(status.reload.account).to eq(account)
     end
   end
 
   it 'processes one remote account at a time using locks' do
-    wait_for_start = true
     fail_occurred  = false
     return_values  = Concurrent::Array.new
 
-    threads = Array.new(5) do
-      Thread.new do
-        true while wait_for_start
-
-        begin
-          return_values << described_class.new.call('foo@ap.example.com')
-        rescue ActiveRecord::RecordNotUnique
-          fail_occurred = true
-        ensure
-          RedisConfiguration.pool.checkin if Thread.current[:redis]
-        end
+    multi_threaded_execution(5) do
+      begin
+        return_values << described_class.new.call('foo@ap.example.com')
+      rescue ActiveRecord::RecordNotUnique
+        fail_occurred = true
+      ensure
+        RedisConfiguration.pool.checkin if Thread.current[:redis]
       end
     end
-
-    wait_for_start = false
-    threads.each(&:join)
 
     expect(fail_occurred).to be false
     expect(return_values).to_not include(nil)

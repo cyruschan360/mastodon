@@ -60,12 +60,6 @@ module Account::Interactions
       end
     end
 
-    def domain_blocking_map(target_account_ids, account_id)
-      accounts_map    = Account.where(id: target_account_ids).select('id, domain').each_with_object({}) { |a, h| h[a.id] = a.domain }
-      blocked_domains = domain_blocking_map_by_domain(accounts_map.values.compact, account_id)
-      accounts_map.reduce({}) { |h, (id, domain)| h.merge(id => blocked_domains[domain]) }
-    end
-
     def domain_blocking_map_by_domain(target_domains, account_id)
       follow_mapping(AccountDomainBlock.where(account_id: account_id, domain: target_domains), :domain)
     end
@@ -88,6 +82,11 @@ module Account::Interactions
 
     has_many :following, -> { order('follows.id desc') }, through: :active_relationships,  source: :target_account
     has_many :followers, -> { order('follows.id desc') }, through: :passive_relationships, source: :account
+
+    with_options class_name: 'SeveredRelationship', dependent: :destroy do
+      has_many :severed_relationships, foreign_key: 'local_account_id', inverse_of: :local_account
+      has_many :remote_severed_relationships, foreign_key: 'remote_account_id', inverse_of: :remote_account
+    end
 
     # Account notes
     has_many :account_notes, dependent: :destroy
@@ -122,8 +121,6 @@ module Account::Interactions
 
     rel.save! if rel.changed?
 
-    remove_potential_friendship(other_account)
-
     rel
   end
 
@@ -137,13 +134,10 @@ module Account::Interactions
 
     rel.save! if rel.changed?
 
-    remove_potential_friendship(other_account)
-
     rel
   end
 
   def block!(other_account, uri: nil)
-    remove_potential_friendship(other_account)
     block_relationships.create_with(uri: uri)
                        .find_or_create_by!(target_account: other_account)
   end
@@ -153,8 +147,6 @@ module Account::Interactions
     mute = mute_relationships.create_with(hide_notifications: notifications).find_or_initialize_by(target_account: other_account)
     mute.expires_in = duration.zero? ? nil : duration
     mute.save!
-
-    remove_potential_friendship(other_account)
 
     # When toggling a mute between hiding and allowing notifications, the mute will already exist, so the find_or_create_by! call will return the existing Mute without updating the hide_notifications attribute. Therefore, we check that hide_notifications? is what we want and set it if it isn't.
     mute.update!(hide_notifications: notifications) if mute.hide_notifications? != notifications
@@ -191,12 +183,12 @@ module Account::Interactions
   end
 
   def unblock_domain!(other_domain)
-    block = domain_blocks.find_by(domain: other_domain)
+    block = domain_blocks.find_by(domain: normalized_domain(other_domain))
     block&.destroy
   end
 
   def following?(other_account)
-    active_relationships.where(target_account: other_account).exists?
+    active_relationships.exists?(target_account: other_account)
   end
 
   def following_anyone?
@@ -212,51 +204,47 @@ module Account::Interactions
   end
 
   def blocking?(other_account)
-    block_relationships.where(target_account: other_account).exists?
+    block_relationships.exists?(target_account: other_account)
   end
 
   def domain_blocking?(other_domain)
-    domain_blocks.where(domain: other_domain).exists?
+    domain_blocks.exists?(domain: other_domain)
   end
 
   def muting?(other_account)
-    mute_relationships.where(target_account: other_account).exists?
+    mute_relationships.exists?(target_account: other_account)
   end
 
   def muting_conversation?(conversation)
-    conversation_mutes.where(conversation: conversation).exists?
+    conversation_mutes.exists?(conversation: conversation)
   end
 
   def muting_notifications?(other_account)
-    mute_relationships.where(target_account: other_account, hide_notifications: true).exists?
+    mute_relationships.exists?(target_account: other_account, hide_notifications: true)
   end
 
   def muting_reblogs?(other_account)
-    active_relationships.where(target_account: other_account, show_reblogs: false).exists?
+    active_relationships.exists?(target_account: other_account, show_reblogs: false)
   end
 
   def requested?(other_account)
-    follow_requests.where(target_account: other_account).exists?
+    follow_requests.exists?(target_account: other_account)
   end
 
   def favourited?(status)
-    status.proper.favourites.where(account: self).exists?
+    status.proper.favourites.exists?(account: self)
   end
 
   def bookmarked?(status)
-    status.proper.bookmarks.where(account: self).exists?
+    status.proper.bookmarks.exists?(account: self)
   end
 
   def reblogged?(status)
-    status.proper.reblogs.where(account: self).exists?
+    status.proper.reblogs.exists?(account: self)
   end
 
   def pinned?(status)
-    status_pins.where(status: status).exists?
-  end
-
-  def endorsed?(account)
-    account_pins.where(target_account: account).exists?
+    status_pins.exists?(status: status)
   end
 
   def status_matches_filters(status)
@@ -314,9 +302,7 @@ module Account::Interactions
     })
   end
 
-  private
-
-  def remove_potential_friendship(other_account)
-    PotentialFriendshipTracker.remove(id, other_account.id)
+  def normalized_domain(domain)
+    TagManager.instance.normalize_domain(domain)
   end
 end

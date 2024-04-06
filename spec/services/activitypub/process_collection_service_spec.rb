@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe ActivityPub::ProcessCollectionService, type: :service do
+RSpec.describe ActivityPub::ProcessCollectionService do
   subject { described_class.new }
 
   let(:actor) { Fabricate(:account, domain: 'example.com', uri: 'http://example.com/account') }
@@ -242,7 +242,8 @@ RSpec.describe ActivityPub::ProcessCollectionService, type: :service do
         it 'does not process forged payload' do
           allow(ActivityPub::Activity).to receive(:factory)
 
-          subject.call(json, forwarder)
+          expect { subject.call(json, forwarder) }
+            .to_not change(actor.reload.statuses, :count)
 
           expect(ActivityPub::Activity).to_not have_received(:factory).with(
             hash_including(
@@ -264,7 +265,7 @@ RSpec.describe ActivityPub::ProcessCollectionService, type: :service do
             anything
           )
 
-          expect(Status.where(uri: 'https://example.com/users/bob/fake-status').exists?).to be false
+          expect(Status.exists?(uri: 'https://example.com/users/bob/fake-status')).to be false
         end
       end
     end

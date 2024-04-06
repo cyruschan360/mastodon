@@ -2,7 +2,7 @@
 
 require 'rails_helper'
 
-RSpec.describe UnsuspendAccountService, type: :service do
+RSpec.describe UnsuspendAccountService do
   shared_context 'with common context' do
     subject { described_class.new.call(account) }
 
@@ -39,13 +39,13 @@ RSpec.describe UnsuspendAccountService, type: :service do
       let!(:account)         { Fabricate(:account) }
       let!(:remote_follower) { Fabricate(:account, uri: 'https://alice.com', inbox_url: 'https://alice.com/inbox', protocol: :activitypub, domain: 'alice.com') }
       let!(:remote_reporter) { Fabricate(:account, uri: 'https://bob.com', inbox_url: 'https://bob.com/inbox', protocol: :activitypub, domain: 'bob.com') }
-      let!(:report)          { Fabricate(:report, account: remote_reporter, target_account: account) }
 
       before do
+        Fabricate(:report, account: remote_reporter, target_account: account)
         remote_follower.follow!(account)
       end
 
-      it 'merges back into feeds of local followers and sends update' do
+      it 'merges back into feeds of local followers and sends update', :sidekiq_inline do
         subject
 
         expect_feeds_merged

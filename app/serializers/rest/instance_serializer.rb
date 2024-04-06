@@ -28,7 +28,7 @@ class REST::InstanceSerializer < ActiveModel::Serializer
       }
     else
       {
-        url: full_pack_url('media/images/preview.png'),
+        url: frontend_asset_url('images/preview.png'),
       }
     end
   end
@@ -54,6 +54,7 @@ class REST::InstanceSerializer < ActiveModel::Serializer
 
       accounts: {
         max_featured_tags: FeaturedTag::LIMIT,
+        max_pinned_statuses: StatusPinValidator::PIN_LIMIT,
       },
 
       statuses: {

@@ -420,8 +420,8 @@ class FeedManager
     check_for_blocks = status.active_mentions.pluck(:account_id)
     check_for_blocks.push(status.in_reply_to_account) if status.reply? && !status.in_reply_to_account_id.nil?
 
-    should_filter   = blocks_or_mutes?(receiver_id, check_for_blocks, :mentions)                                                       # Filter if it's from someone I blocked, in reply to someone I blocked, or mentioning someone I blocked (or muted)
-    should_filter ||= status.account.silenced? && !Follow.where(account_id: receiver_id, target_account_id: status.account_id).exists? # of if the account is silenced and I'm not following them
+    should_filter   = blocks_or_mutes?(receiver_id, check_for_blocks, :mentions) # Filter if it's from someone I blocked, in reply to someone I blocked, or mentioning someone I blocked (or muted)
+    should_filter ||= status.account.silenced? && !Follow.exists?(account_id: receiver_id, target_account_id: status.account_id) # Filter if the account is silenced and I'm not following them
 
     should_filter
   end
@@ -431,10 +431,10 @@ class FeedManager
   # @param [List] list
   # @return [Boolean]
   def filter_from_list?(status, list)
-    if status.reply? && status.in_reply_to_account_id != status.account_id
-      should_filter = status.in_reply_to_account_id != list.account_id
-      should_filter &&= !list.show_followed?
-      should_filter &&= !(list.show_list? && ListAccount.where(list_id: list.id, account_id: status.in_reply_to_account_id).exists?)
+    if status.reply? && status.in_reply_to_account_id != status.account_id                                                       # Status is a reply to account other than status account
+      should_filter = status.in_reply_to_account_id != list.account_id                                                           # Status replies to account id other than list account
+      should_filter &&= !list.show_followed?                                                                                     # List show_followed? is false
+      should_filter &&= !(list.show_list? && ListAccount.exists?(list_id: list.id, account_id: status.in_reply_to_account_id))   # If show_list? true, check for a ListAccount with list and reply to account
 
       return !!should_filter
     end
@@ -449,7 +449,11 @@ class FeedManager
   # @param [Hash] crutches
   # @return [Boolean]
   def filter_from_tags?(status, receiver_id, crutches)
-    receiver_id == status.account_id || ((crutches[:active_mentions][status.id] || []) + [status.account_id]).any? { |target_account_id| crutches[:blocking][target_account_id] || crutches[:muting][target_account_id] } || crutches[:blocked_by][status.account_id] || crutches[:domain_blocking][status.account.domain]
+    receiver_id == status.account_id ||                                                                                          # Receiver is status account?
+      ((crutches[:active_mentions][status.id] || []) + [status.account_id])                                                      # For mentioned accounts or status account:
+        .any? { |target_account_id| crutches[:blocking][target_account_id] || crutches[:muting][target_account_id] } ||          #   - Target account is muted or blocked?
+      crutches[:blocked_by][status.account_id] ||                                                                                # Blocked by status account?
+      crutches[:domain_blocking][status.account.domain]                                                                          # Blocking domain of status account?
   end
 
   # Adds a status to an account's feed, returning true if a status was

@@ -1,21 +1,21 @@
 import PropTypes from 'prop-types';
 
-import { defineMessages, injectIntl, FormattedMessage } from 'react-intl';
+import { defineMessages, injectIntl } from 'react-intl';
 
 import classNames from 'classnames';
 import { Helmet } from 'react-helmet';
 import { withRouter } from 'react-router-dom';
 
+import { createSelector } from '@reduxjs/toolkit';
 import Immutable from 'immutable';
 import ImmutablePropTypes from 'react-immutable-proptypes';
 import ImmutablePureComponent from 'react-immutable-pure-component';
 import { connect } from 'react-redux';
-import { createSelector } from 'reselect';
 
-import { ReactComponent as VisibilityIcon } from '@material-symbols/svg-600/outlined/visibility.svg';
-import { ReactComponent as VisibilityOffIcon } from '@material-symbols/svg-600/outlined/visibility_off.svg';
 import { HotKeys } from 'react-hotkeys';
 
+import VisibilityIcon from '@/material-icons/400-24px/visibility.svg?react';
+import VisibilityOffIcon from '@/material-icons/400-24px/visibility_off.svg?react';
 import { Icon }  from 'mastodon/components/icon';
 import { LoadingIndicator } from 'mastodon/components/loading_indicator';
 import ScrollContainer from 'mastodon/containers/scroll_container';
@@ -27,14 +27,13 @@ import {
   unmuteAccount,
 } from '../../actions/accounts';
 import { initBlockModal } from '../../actions/blocks';
-import { initBoostModal } from '../../actions/boosts';
 import {
   replyCompose,
   mentionCompose,
   directCompose,
 } from '../../actions/compose';
 import {
-  blockDomain,
+  initDomainBlockModal,
   unblockDomain,
 } from '../../actions/domain_blocks';
 import {
@@ -317,7 +316,7 @@ class Status extends ImmutablePureComponent {
         if ((e && e.shiftKey) || !boostModal) {
           this.handleModalReblog(status);
         } else {
-          dispatch(initBoostModal({ status, onReblog: this.handleModalReblog }));
+          dispatch(openModal({ modalType: 'BOOST', modalProps: { status, onReblog: this.handleModalReblog } }));
         }
       }
     } else {
@@ -463,15 +462,8 @@ class Status extends ImmutablePureComponent {
     this.props.dispatch(unblockAccount(account.get('id')));
   };
 
-  handleBlockDomainClick = domain => {
-    this.props.dispatch(openModal({
-      modalType: 'CONFIRM',
-      modalProps: {
-        message: <FormattedMessage id='confirmations.domain_block.message' defaultMessage='Are you really, really sure you want to block the entire {domain}? In most cases a few targeted blocks or mutes are sufficient and preferable. You will not see content from that domain in any public timelines or your notifications. Your followers from that domain will be removed.' values={{ domain: <strong>{domain}</strong> }} />,
-        confirm: this.props.intl.formatMessage(messages.blockDomainConfirm),
-        onConfirm: () => this.props.dispatch(blockDomain(domain)),
-      },
-    }));
+  handleBlockDomainClick = account => {
+    this.props.dispatch(initDomainBlockModal(account));
   };
 
   handleUnblockDomainClick = domain => {
@@ -582,16 +574,20 @@ class Status extends ImmutablePureComponent {
     ));
   }
 
-  setRef = c => {
+  setContainerRef = c => {
     this.node = c;
+  };
+
+  setStatusRef = c => {
+    this.statusNode = c;
   };
 
   _scrollStatusIntoView () {
     const { status, multiColumn } = this.props;
 
     if (status) {
-      window.requestAnimationFrame(() => {
-        this.node?.querySelector('.detailed-status__wrapper')?.scrollIntoView(true);
+      requestIdleCallback(() => {
+        this.statusNode?.scrollIntoView(true);
 
         // In the single-column interface, `scrollIntoView` will put the post behind the header,
         // so compensate for that.
@@ -629,9 +625,8 @@ class Status extends ImmutablePureComponent {
     }
 
     // Scroll to focused post if it is loaded
-    const child = this.node?.querySelector('.detailed-status__wrapper');
-    if (child) {
-      return [0, child.offsetTop];
+    if (this.statusNode) {
+      return [0, this.statusNode.offsetTop];
     }
 
     // Do not scroll otherwise, `componentDidUpdate` will take care of that
@@ -692,11 +687,11 @@ class Status extends ImmutablePureComponent {
         />
 
         <ScrollContainer scrollKey='thread' shouldUpdateScroll={this.shouldUpdateScroll}>
-          <div className={classNames('scrollable', { fullscreen })} ref={this.setRef}>
+          <div className={classNames('scrollable', { fullscreen })} ref={this.setContainerRef}>
             {ancestors}
 
             <HotKeys handlers={handlers}>
-              <div className={classNames('focusable', 'detailed-status__wrapper', `detailed-status__wrapper-${status.get('visibility')}`)} tabIndex={0} aria-label={textForScreenReader(intl, status, false)}>
+              <div className={classNames('focusable', 'detailed-status__wrapper', `detailed-status__wrapper-${status.get('visibility')}`)} tabIndex={0} aria-label={textForScreenReader(intl, status, false)} ref={this.setStatusRef}>
                 <DetailedStatus
                   key={`details-${status.get('id')}`}
                   status={status}
