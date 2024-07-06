@@ -44,11 +44,7 @@ services:
       - external_network
       - internal_network
     healthcheck:
-      test:
-        [
-          'CMD-SHELL',
-          'curl --silent --fail localhost:9200/_cluster/health || exit 1',
-        ]
+      test: ["CMD-SHELL", "curl --silent --fail localhost:9200/_cluster/health || exit 1"]
     volumes:
       - ./elasticsearch:/usr/share/elasticsearch/data
     ulimits:
@@ -76,7 +72,7 @@ services:
       - internal_network
     healthcheck:
       # prettier-ignore
-      test: ['CMD-SHELL', 'curl -f localhost:3000/health || exit 1']
+      test: ['CMD-SHELL', 'wget -q --spider --proxy=off localhost:3000/health || exit 1']
     ports:
       #- '127.0.0.1:3000:3000'
       - '0.0.0.0:40115:3000'
@@ -92,13 +88,13 @@ services:
     image: ghcr.io/mastodon/mastodon:v4.2.10
     restart: always
     env_file: .env.production
-    command: node /opt/mastodon/streaming/index.js
+    #command: node /opt/mastodon/streaming/index.js
+    command: node ./streaming
     networks:
       - external_network
       - internal_network
     healthcheck:
       # prettier-ignore
-      #test: ['CMD-SHELL', 'curl -f localhost:4000/api/v1/streaming/health || exit 1']
       test: ['CMD-SHELL', 'wget -q --spider --proxy=off localhost:4000/api/v1/streaming/health || exit 1']
     ports:
       - '0.0.0.0:40116:4000'
@@ -144,3 +140,4 @@ networks:
   external_network:
   internal_network:
     internal: true
+
