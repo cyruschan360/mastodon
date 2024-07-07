@@ -62,7 +62,7 @@ services:
           memory: 1G
 
   web:
-    build: .
+    #build: .
     image: ghcr.io/mastodon/mastodon:v4.2.10
     restart: always
     env_file: .env.production
@@ -84,10 +84,10 @@ services:
       - ./public/system:/mastodon/public/system
 
   streaming:
-    build:
-      context: .
-      dockerfile: ./streaming/Dockerfile
-    image: ghcr.io/mastodon/mastodon-streaming:v4.2.10
+    #build:
+    #  context: .
+    #  dockerfile: ./streaming/Dockerfile
+    image: ghcr.io/mastodon/mastodon-streaming:v4.2.8
     restart: always
     env_file: .env.production
     command: node ./streaming
@@ -104,7 +104,7 @@ services:
       - redis
 
   sidekiq:
-    build: .
+    #build: .
     image: ghcr.io/mastodon/mastodon:v4.2.10
     restart: always
     env_file: .env.production
