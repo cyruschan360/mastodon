@@ -86,6 +86,10 @@ WORKDIR /opt/mastodon
 # Copy Node package configuration files from build system to container
 COPY package.json yarn.lock .yarnrc.yml /opt/mastodon/
 COPY .yarn /opt/mastodon/.yarn
+
+COPY --from=node /usr/local/bin /usr/local/bin
+COPY --from=node /usr/local/lib /usr/local/lib
+
 # Copy Streaming source code from build system to container
 COPY . /opt/mastodon/streaming
 
