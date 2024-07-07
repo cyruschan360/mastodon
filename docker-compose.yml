@@ -88,8 +88,8 @@ services:
     image: ghcr.io/mastodon/mastodon:v4.2.10
     restart: always
     env_file: .env.production
-    #command: node /opt/mastodon/streaming/index.js
-    command: node ./streaming
+    command: node /opt/mastodon/streaming/index.js
+    #command: node ./streaming
     networks:
       - external_network
       - internal_network
