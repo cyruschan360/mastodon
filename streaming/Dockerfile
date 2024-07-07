@@ -87,8 +87,8 @@ WORKDIR /opt/mastodon
 COPY package.json yarn.lock .yarnrc.yml /opt/mastodon/
 COPY .yarn /opt/mastodon/.yarn
 
-COPY --from=node /usr/local/bin /usr/local/bin
-COPY --from=node /usr/local/lib /usr/local/lib
+COPY --from=streaming /usr/local/bin /usr/local/bin
+COPY --from=streaming /usr/local/lib /usr/local/lib
 
 # Copy Streaming source code from build system to container
 COPY . /opt/mastodon/streaming
